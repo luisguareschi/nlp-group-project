@@ -22,4 +22,4 @@
 
 ## Verification
 
-All team members can explain parser behavior, label definitions, and eval metrics. Reproducibility: `pip install -r requirements.txt`, `python -m src.eval_runner`, `streamlit run app.py`.
+All team members can explain parser behavior, label definitions, and eval metrics. Reproducibility: `pip install -r requirements.txt`, `python -m src.eval_runner` (full suite, model prompt + progress bar), `streamlit run app.py` → **Evaluation dashboard**.

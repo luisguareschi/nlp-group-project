@@ -55,9 +55,22 @@ Separate users with new lines. Blank lines are ignored.
 | Dead Internet Index | Higher = more bot-like / performative non-human labels in the thread |
 | Cues | Phrases or patterns cited from that user's comments |
 
-## Evaluation page
+## Evaluation dashboard
 
-Use **Eval dashboard** (sidebar) to run the gold test set and view accuracy, macro-F1, and confusion matrices. Useful for coursework reproducibility, not for analyzing your own pasted threads.
+Open **Evaluation dashboard** in the Streamlit sidebar (not for analyzing pasted threads — coursework / reproducibility only).
+
+At the top you see how many gold participants are in the set and a **tier breakdown** (`synthetic`, `disclosed`, `grid`, `expert`, `edge`) with short descriptions of each source.
+
+Choose an action:
+
+| Action | What it does |
+|--------|----------------|
+| **View precomputed results** | Loads `results/eval_run.json` and shows metrics for `features_only` and `hybrid` (no Ollama required). Use this for quick review or grading. |
+| **Run full suite** | Runs both modes on all 48 gold labels, shows a progress bar, overwrites `results/eval_run.json`, and refreshes confusion matrix PNGs. Pick an Ollama model; hybrid needs Ollama running. |
+
+For each mode you get accuracy, macro-F1, binary macro-F1, high-confidence error count, calibration (mean confidence when correct vs wrong), a confusion matrix image, and a per-label classification report.
+
+Equivalent from the terminal: `python -m src.eval_runner` (interactive model selection and `tqdm` progress). See [INSTALL.md](INSTALL.md).
 
 ## Tips for better parsing
 

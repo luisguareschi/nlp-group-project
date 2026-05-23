@@ -1,6 +1,8 @@
 # Failure Mode Analysis
 
-Documented failures from `features_only` / hybrid evaluation on `data/eval/participants.jsonl` (n=48). Re-run after prompt changes: `python -m src.eval_runner`.
+Documented failures from `features_only` / hybrid evaluation on `data/eval/participants.jsonl` (n=48).
+
+**Re-run after prompt or model changes:** `python -m src.eval_runner` (pick Ollama model when prompted) or **Evaluation dashboard** → **Run full suite**. **View precomputed results** loads the last saved `results/eval_run.json` without re-running.
 
 ## Summary metrics (features_only baseline)
 

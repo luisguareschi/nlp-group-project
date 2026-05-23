@@ -2,6 +2,18 @@
 
 Use these definitions when creating or reviewing gold labels in `data/eval/participants.jsonl`.
 
+## Gold set tiers (`gold_tier`)
+
+Each eval row has a `gold_tier` field. The **Evaluation dashboard** lists counts and descriptions; use this table when authoring or reviewing labels.
+
+| Tier | Meaning |
+|------|---------|
+| `synthetic` | Team-authored role-play threads covering all four label types; gold labels are high-confidence by design. |
+| `disclosed` | Bots that explicitly disclose automation (AutoMod, wiki bots) alongside ordinary human replies. |
+| `grid` | GRiD-style paired snippets: a casual human comment vs. a GPT reply on the same topic. |
+| `expert` | De-identified excerpts from real threads; majority-vote labels; `annotator_disagreement` when annotators split. |
+| `edge` | Hard cases: very short comments, sarcasm, copypasta, multilingual text, helpful mod bots vs. spam, coordinated phrasing. |
+
 ## `human`
 
 - Natural variation, typos, personal anecdotes, inconsistent tone

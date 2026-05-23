@@ -41,17 +41,25 @@ Open the URL shown in the terminal (default `http://localhost:8501`).
 
 ## 4. Run evaluation
 
+The harness runs **`features_only`** then **`hybrid`** on the full gold set (`data/eval/participants.jsonl`, 48 rows).
+
+**CLI** (Ollama required for hybrid):
+
 ```bash
 python -m src.eval_runner
 ```
 
+You will be prompted to pick an installed Ollama model from a numbered list. A `tqdm` progress bar shows classification and save steps.
+
+**Streamlit:** sidebar → **Evaluation dashboard** → **Run full suite** (same outputs, with an in-app progress bar) or **View precomputed results** (reads existing JSON; no Ollama needed).
+
 Outputs:
 
-- `results/eval_run.json`
+- `results/eval_run.json` — metrics for both modes
 - `results/confusion_matrix_features_only.png`
 - `results/confusion_matrix_hybrid.png`
 
-Or use the **Eval dashboard** page in the Streamlit sidebar.
+Precomputed `results/eval_run.json` is included in the repo so **View precomputed results** works before you run anything locally.
 
 ## 5. Regenerate eval dataset
 

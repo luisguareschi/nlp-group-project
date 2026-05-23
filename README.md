@@ -23,8 +23,9 @@ See [docs/INSTALL.md](docs/INSTALL.md) and [docs/USER_MANUAL.md](docs/USER_MANUA
 - Parse Reddit-style pasted threads (`u/name: comment`)
 - Hybrid classification: Ollama LLM + stylometric heuristics (fallback when offline)
 - `features_only` mode for fast, fully local evaluation
-- Custom eval set: **48** gold participant labels (`[data/eval/participants.jsonl](data/eval/participants.jsonl)`)
-- Eval dashboard Streamlit page + `python -m src.eval_runner`
+- Custom eval set: **48** gold participant labels ([`data/eval/participants.jsonl`](data/eval/participants.jsonl)) across five tiers (synthetic, disclosed, grid, expert, edge)
+- **Evaluation dashboard** Streamlit page: run or view the full `features_only` + `hybrid` suite with progress feedback
+- CLI harness: `python -m src.eval_runner` (interactive Ollama model picker, `tqdm` progress)
 
 ## Repository layout
 
@@ -45,13 +46,22 @@ docs/                  # Install, manual, labeling, failure analysis, report dra
 
 ## Evaluation
 
+The harness always runs **`features_only`** then **`hybrid`** on the full gold set (48 participants), writes metrics to `results/eval_run.json`, and saves `results/confusion_matrix_{mode}.png`.
+
+**CLI** (requires Ollama for hybrid; pick a model when prompted):
+
 ```bash
-python -m src.eval_runner          # writes results/eval_run.json (can also be run on web app)
+python -m src.eval_runner          # tqdm progress → results/eval_run.json
+```
+
+**Streamlit** (sidebar → **Evaluation dashboard**): choose **Run full suite** (same as CLI, with a progress bar) or **View precomputed results** without re-running.
+
+```bash
 python scripts/build_eval_jsonl.py # regenerate gold set
 pytest tests/ -q
 ```
 
-Precomputed metrics ship in `[results/eval_run.json](results/eval_run.json)` for reproducibility without Ollama.
+Precomputed metrics ship in [`results/eval_run.json`](results/eval_run.json) so you can use **View precomputed results** without Ollama.
 
 ## Course alignment
 

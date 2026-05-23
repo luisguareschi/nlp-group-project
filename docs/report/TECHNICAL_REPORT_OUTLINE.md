@@ -29,14 +29,15 @@ Expand each section for PDF submission. Target length: appropriate to project sc
 - Tier 2: expert consensus (de-identified excerpts)
 - Tier 3: edge cases (analyzed separately)
 - Metrics: macro-F1, binary collapse, calibration
-- Ablation table from `results/eval_run.json`
+- Ablation table from `results/eval_run.json` (`features_only` vs `hybrid` on full n=48)
 - Human baseline (optional): one annotator on held-out set
+- Reproducibility: `python -m src.eval_runner` or Streamlit **Evaluation dashboard** → **Run full suite**
 
 ## 5. Results
 
 - Include tables from `results/eval_run.json`
-- Confusion matrices (`results/confusion_matrix_*.png`)
-- Per-tier breakdown (synthetic vs expert vs edge)
+- Confusion matrices (`results/confusion_matrix_features_only.png`, `results/confusion_matrix_hybrid.png`)
+- Per-tier discussion using dashboard tier legend / `gold_tier` field (optional filtered re-runs via `run_eval(..., tier_filter=...)` in code)
 
 ## 6. Failure taxonomy
 
