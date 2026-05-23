@@ -25,7 +25,7 @@ from sklearn.metrics import (
     f1_score,
 )
 
-from src.classify import classify_participant
+from src.classify import classify_participant, list_ollama_models
 from src.schemas import LABELS
 
 EVAL_PATH = Path(__file__).resolve().parents[1] / "data" / "eval" / "participants.jsonl"
@@ -217,5 +217,36 @@ def run_full_eval_suite(
 
 
 if __name__ == "__main__":
-    suite = run_full_eval_suite()
+    from tqdm import tqdm
+
+    _progress_bar: list[tqdm | None] = [None]
+
+    def on_progress(message: str, current: int, total: int) -> None:
+        bar = _progress_bar[0]
+        if bar is None:
+            bar = tqdm(total=total, unit="step", dynamic_ncols=True)
+            _progress_bar[0] = bar
+        if bar.total != total:
+            bar.reset(total=total)
+        bar.n = current
+        bar.set_description(message, refresh=False)
+        bar.refresh()
+
+    print("Available models:")
+    available_models = list_ollama_models()
+    for i, model in enumerate(available_models):
+        print(f"{i+1}. {model}")
+    if not available_models:
+        print("No models available. Please install Ollama and try again.")
+        exit(1)
+    selected_model = int(input("Enter the number of the model you want to use: "))
+    selected_model = available_models[selected_model - 1]
+    try:
+        suite = run_full_eval_suite(model=selected_model, on_progress=on_progress)
+    finally:
+        if _progress_bar[0] is not None:
+            _progress_bar[0].close()
     print(json.dumps(suite, indent=2))
+    print("Evaluation complete!")
+    print(f"Results saved to {RESULTS_DIR / 'eval_run.json'}")
+    print("You can now view the results in the browser by running the Streamlit app and navigating to the Evaluation dashboard page.")

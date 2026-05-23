@@ -23,14 +23,14 @@ See [docs/INSTALL.md](docs/INSTALL.md) and [docs/USER_MANUAL.md](docs/USER_MANUA
 - Parse Reddit-style pasted threads (`u/name: comment`)
 - Hybrid classification: Ollama LLM + stylometric heuristics (fallback when offline)
 - `features_only` mode for fast, fully local evaluation
-- Custom eval set: **48** gold participant labels ([`data/eval/participants.jsonl`](data/eval/participants.jsonl))
+- Custom eval set: **48** gold participant labels (`[data/eval/participants.jsonl](data/eval/participants.jsonl)`)
 - Eval dashboard Streamlit page + `python -m src.eval_runner`
 
 ## Repository layout
 
 ```
 app.py                 # Main Streamlit UI
-pages/2_Eval_dashboard.py
+pages/2_Evaluation_dashboard.py
 src/
   parse_thread.py      # Thread parser
   features.py          # Stylometric signals + heuristic classifier
@@ -46,24 +46,26 @@ docs/                  # Install, manual, labeling, failure analysis, report dra
 ## Evaluation
 
 ```bash
-python -m src.eval_runner          # writes results/eval_run.json
+python -m src.eval_runner          # writes results/eval_run.json (can also be run on web app)
 python scripts/build_eval_jsonl.py # regenerate gold set
 pytest tests/ -q
 ```
 
-Precomputed metrics ship in [`results/eval_run.json`](results/eval_run.json) for reproducibility without Ollama.
+Precomputed metrics ship in `[results/eval_run.json](results/eval_run.json)` for reproducibility without Ollama.
 
 ## Course alignment
 
-| Requirement | Artifact |
-|-------------|----------|
-| Functional POC | `app.py` |
+
+| Requirement         | Artifact                                 |
+| ------------------- | ---------------------------------------- |
+| Functional POC      | `app.py`                                 |
 | Custom eval (30–50) | `data/eval/participants.jsonl` (48 rows) |
-| User manual | `docs/USER_MANUAL.md` |
-| Install guide | `docs/INSTALL.md` |
-| Failure analysis | `docs/FAILURE_ANALYSIS.md` |
-| Report drafts | `docs/report/` |
-| Topic brief | `docs/TOPIC_BRIEF.md` |
+| User manual         | `docs/USER_MANUAL.md`                    |
+| Install guide       | `docs/INSTALL.md`                        |
+| Failure analysis    | `docs/FAILURE_ANALYSIS.md`               |
+| Report drafts       | `docs/report/`                           |
+| Topic brief         | `docs/TOPIC_BRIEF.md`                    |
+
 
 ## Team notes
 
