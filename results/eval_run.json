@@ -51,48 +51,48 @@
   "hybrid": {
     "mode": "hybrid",
     "n": 48,
-    "accuracy": 0.6042,
-    "macro_f1": 0.5064,
-    "binary_macro_f1": 0.7078,
-    "mean_confidence_when_correct": 53.62,
-    "mean_confidence_when_wrong": 54.21,
+    "accuracy": 0.7083,
+    "macro_f1": 0.5708,
+    "binary_macro_f1": 0.75,
+    "mean_confidence_when_correct": 57.21,
+    "mean_confidence_when_wrong": 52.5,
     "high_confidence_errors": 0,
     "classification_report": {
       "bot": {
-        "precision": 0.7,
-        "recall": 0.4666666666666667,
-        "f1-score": 0.56,
+        "precision": 0.8666666666666667,
+        "recall": 0.8666666666666667,
+        "f1-score": 0.8666666666666667,
         "support": 15.0
       },
       "bot_imitating_human": {
-        "precision": 1.0,
-        "recall": 0.1111111111111111,
-        "f1-score": 0.2,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1-score": 0.0,
         "support": 9.0
       },
       "human": {
-        "precision": 0.5625,
+        "precision": 0.6,
         "recall": 1.0,
-        "f1-score": 0.72,
+        "f1-score": 0.75,
         "support": 18.0
       },
       "human_imitating_bot": {
-        "precision": 0.6,
+        "precision": 1.0,
         "recall": 0.5,
-        "f1-score": 0.5454545454545454,
+        "f1-score": 0.6666666666666666,
         "support": 6.0
       },
-      "accuracy": 0.6041666666666666,
+      "accuracy": 0.7083333333333334,
       "macro avg": {
-        "precision": 0.7156250000000001,
-        "recall": 0.5194444444444444,
-        "f1-score": 0.5063636363636363,
+        "precision": 0.6166666666666667,
+        "recall": 0.5916666666666667,
+        "f1-score": 0.5708333333333333,
         "support": 48.0
       },
       "weighted avg": {
-        "precision": 0.6921875000000001,
-        "recall": 0.6041666666666666,
-        "f1-score": 0.5506818181818182,
+        "precision": 0.6208333333333332,
+        "recall": 0.7083333333333334,
+        "f1-score": 0.6354166666666666,
         "support": 48.0
       }
     }

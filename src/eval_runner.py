@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import json
 import os
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
+
+ProgressCallback = Callable[[str, int, int], None]
 
 # Writable matplotlib cache inside repo (CI/sandbox friendly)
 _MPL_DIR = Path(__file__).resolve().parents[1] / "results" / ".matplotlib"
@@ -73,6 +76,7 @@ def run_eval(
     mode: str = "features_only",
     model: str = "llama3.2:3b",
     tier_filter: str | None = None,
+    on_progress: ProgressCallback | None = None,
 ) -> dict:
     rows = rows or load_eval()
     if tier_filter:
@@ -88,7 +92,14 @@ def run_eval(
     confidences: list[int] = []
     correct_flags: list[bool] = []
 
-    for r in rows:
+    total = len(rows)
+    for i, r in enumerate(rows, start=1):
+        if on_progress:
+            on_progress(
+                f"{mode}: classifying {r.username} ({i}/{total})",
+                i,
+                total,
+            )
         ctx = thread_participants[r.thread_id]
         pred = classify_participant(
             r.username,
@@ -161,21 +172,44 @@ def save_confusion_matrix(metrics: dict, out_path: Path) -> None:
     plt.close(fig)
 
 
-def run_full_eval_suite(model: str = "llama3.2:3b") -> dict:
+def run_full_eval_suite(
+    model: str = "llama3.2:3b",
+    on_progress: ProgressCallback | None = None,
+) -> dict:
     RESULTS_DIR.mkdir(parents=True, exist_ok=True)
+    modes = ("features_only", "hybrid")
+    rows = load_eval()
+    n = len(rows)
+    total_steps = len(modes) * (n + 1) + 1
+
+    def report(message: str, step: int) -> None:
+        if on_progress:
+            on_progress(message, step, total_steps)
+
     suite: dict = {}
-    for mode in ("features_only", "hybrid"):
+    step = 0
+    for mode in modes:
         try:
-            m = run_eval(mode=mode, model=model)
+
+            def mode_progress(message: str, current: int, _local_total: int) -> None:
+                report(message, step + current)
+
+            m = run_eval(mode=mode, model=model, on_progress=mode_progress)
+            step += n
             suite[mode] = {
                 k: v for k, v in m.items() if k not in ("y_true", "y_pred", "labels")
             }
             save_confusion_matrix(
                 m, RESULTS_DIR / f"confusion_matrix_{mode}.png"
             )
+            step += 1
+            report(f"Saved confusion matrix ({mode})", step)
         except Exception as e:
+            step += n + 1
             suite[mode] = {"error": str(e)}
 
+    step += 1
+    report("Writing eval_run.json", step)
     out = RESULTS_DIR / "eval_run.json"
     with out.open("w", encoding="utf-8") as f:
         json.dump(suite, f, indent=2)

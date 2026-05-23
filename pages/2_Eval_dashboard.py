@@ -129,8 +129,16 @@ if action == "Run full suite":
     st.warning(f"This may take a while to run, depending on the model and the size of the gold set.")
 
     if st.button("Run full suite"):
-        with st.spinner("Running full suite for model {model}..."):
-            suite = run_full_eval_suite(model=model)
+        progress = st.progress(0, text="Starting full suite…")
+        status = st.empty()
+
+        def on_progress(message: str, current: int, total: int) -> None:
+            progress.progress(min(current / total, 1.0), text=message)
+            status.caption(f"Step {current} of {total}")
+
+        suite = run_full_eval_suite(model=model, on_progress=on_progress)
+        progress.progress(1.0, text="Full suite complete")
+        status.empty()
         st.success(f"Saved to `{EVAL_JSON.relative_to(ROOT)}`")
         for mode, metrics in suite.items():
             _display_mode_results(mode, metrics)
