@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
 
 from src.features import UserFeatures, extract_features, features_only_classify
@@ -165,7 +166,13 @@ def analyze_thread(
     mode: str = "hybrid",
     model: str = "llama3.2:3b",
     temperature: float = 0.2,
+    on_progress: Callable[[int, int], None] | None = None,
 ) -> list[ClassificationResult]:
+    total_comments = sum(len(comments) for comments in participants.values())
+    completed_comments = 0
+    if on_progress is not None:
+        on_progress(0, total_comments)
+
     results: list[ClassificationResult] = []
     for user, comments in participants.items():
         results.append(
@@ -178,6 +185,9 @@ def analyze_thread(
                 temperature=temperature,
             )
         )
+        completed_comments += len(comments)
+        if on_progress is not None:
+            on_progress(completed_comments, total_comments)
     return results
 
 

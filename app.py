@@ -133,14 +133,28 @@ if st.button("Analyze thread", type="primary"):
         st.error("Could not parse any participants. Check format in sidebar.")
         st.stop()
 
-    with st.spinner("Classifying participants..."):
-        results = analyze_thread(
-            participants,
-            mode=mode,
-            model=model,
-            temperature=temperature,
+    total_comments = sum(len(comments) for comments in participants.values())
+    progress = st.progress(
+        0.0,
+        text=f"Classifying 0 / {total_comments} comments…",
+    )
+
+    def report_progress(done: int, total: int) -> None:
+        fraction = done / total if total else 1.0
+        progress.progress(
+            fraction,
+            text=f"Classifying {done} / {total} comments…",
         )
-        analysis = build_thread_analysis(results)
+
+    results = analyze_thread(
+        participants,
+        mode=mode,
+        model=model,
+        temperature=temperature,
+        on_progress=report_progress,
+    )
+    progress.empty()
+    analysis = build_thread_analysis(results)
 
     st.subheader("Thread summary")
     m1, m2, m3 = st.columns(3)
