@@ -1,0 +1,5 @@
+u/AutoModerator: Welcome to r/example! Please read the rules before posting. I am a bot, and this action was performed automatically.
+u/AutoModerator: Reminder: No medical advice. Contact a professional for health concerns.
+u/wiki_bot: I found relevant resources: [FAQ](https://example.com/faq) | [Wiki](https://example.com/wiki)
+u/real_user_42: thanks bot, but I just wanted to rant about parking
+u/real_user_42: like seriously who designed this garage
