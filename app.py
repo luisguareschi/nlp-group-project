@@ -77,7 +77,7 @@ st.warning(
 if "thread_text" not in st.session_state:
     st.session_state.thread_text = ""
 
-col1, col2, col3 = st.columns(3, width=700)
+col1, col2, col3 = st.columns(3)
 with col1:
     if st.button("Load example: mixed thread"):
         st.session_state.thread_text = load_example("mixed_thread.txt")

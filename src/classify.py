@@ -54,6 +54,7 @@ def classify_with_ollama(
     *,
     model: str = "llama3.2:3b",
     temperature: float = 0.2,
+    mode: str = "hybrid",
 ) -> ClassificationResult:
     import ollama
 
@@ -107,7 +108,7 @@ Classify u/{username}. Return JSON only."""
         confidence=int(data.get("confidence", feat_conf)),
         reasoning=str(data.get("reasoning", "No reasoning provided.")),
         cues=list(data.get("cues", feat_cues))[:6],
-        mode="hybrid",
+        mode=mode,
     )
     return _apply_confidence_rules(result, features)
 
@@ -152,6 +153,7 @@ def classify_participant(
                 thread_context,
                 model=model,
                 temperature=temperature,
+                mode="llm_only",
             )
         except Exception as e:
             r = classify_features_only(username, comments)
@@ -167,6 +169,7 @@ def classify_participant(
             thread_context,
             model=model,
             temperature=temperature,
+            mode="hybrid",
         )
     except Exception:
         return classify_features_only(username, comments)

@@ -129,8 +129,6 @@ def features_only_classify(features: UserFeatures) -> tuple[str, int, list[str]]
         score_bot += 10
         cues.append("Frequent hedging language")
 
-    if "fellow humans" in " ".join([]).lower():
-        pass
     if features.avg_chars < 25 and features.comment_count <= 2:
         score_bih += 10
         cues.append("Very short comments — low signal")
