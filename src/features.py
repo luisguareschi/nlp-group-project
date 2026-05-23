@@ -21,6 +21,15 @@ BOT_PHRASES = [
 
 HEDGING = ["perhaps", "might", "could be", "it seems", "arguably", "potentially"]
 
+GENERIC_OPENERS = (
+    "honestly", "great question", "so basically", "well,",
+    "absolutely", "certainly", "of course", "sure,",
+    "great point", "good question", "that's a great",
+    "happy to", "i'd be happy", "i'm happy to",
+    "thanks for asking", "thank you for asking",
+    "totally agree", "i totally", "couldn't agree more",
+)
+
 EMOJI_RE = re.compile(
     r"[\U0001F300-\U0001FAFF\U00002600-\U000027BF]+", flags=re.UNICODE
 )
@@ -84,7 +93,7 @@ def extract_features(username: str, comments: list[str]) -> UserFeatures:
     for c in comments:
         first = c.strip().split()[:3]
         phrase = " ".join(first).lower()
-        if phrase.startswith(("honestly", "great question", "so basically", "well,")):
+        if phrase.startswith(GENERIC_OPENERS):
             generic_openers += 1
     generic_score = generic_openers / max(len(comments), 1)
 
@@ -120,8 +129,6 @@ def features_only_classify(features: UserFeatures) -> tuple[str, int, list[str]]
         score_bot += 10
         cues.append("Frequent hedging language")
 
-    if "fellow humans" in " ".join([]).lower():
-        pass
     if features.avg_chars < 25 and features.comment_count <= 2:
         score_bih += 10
         cues.append("Very short comments — low signal")

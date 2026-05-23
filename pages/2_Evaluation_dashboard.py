@@ -66,7 +66,9 @@ for tier in sorted(tier_counts):
 EVAL_JSON = RESULTS_DIR / "eval_run.json"
 
 
-def _confusion_matrix_path(mode: str) -> Path:
+def _confusion_matrix_path(mode: str, tier: str | None = None) -> Path:
+    if tier:
+        return RESULTS_DIR / f"confusion_matrix_{mode}_{tier}.png"
     return RESULTS_DIR / f"confusion_matrix_{mode}.png"
 
 
@@ -82,32 +84,63 @@ def _classification_report_table(metrics: dict) -> dict:
     }
 
 
-def _display_mode_results(mode: str, metrics: dict) -> None:
+def _display_mode_results(mode: str, metrics: dict, tier: str | None = None) -> None:
     if "error" in metrics:
         st.error(f"**{mode}** failed: {metrics['error']}")
         return
 
-    st.subheader(mode.replace("_", " ").title())
     c1, c2, c3, c4 = st.columns(4)
     c1.metric("Accuracy", metrics["accuracy"])
     c2.metric("Macro F1", metrics["macro_f1"])
     c3.metric("Binary macro F1", metrics["binary_macro_f1"])
     c4.metric("High-conf errors", metrics["high_confidence_errors"])
 
-    st.markdown("**Calibration**")
-    st.write(
-        f"Mean confidence when correct: **{metrics['mean_confidence_when_correct']}** | "
-        f"when wrong: **{metrics['mean_confidence_when_wrong']}**"
-    )
+    st.markdown("**Calibration (signal strength)**")
+    conf_correct = metrics["mean_confidence_when_correct"]
+    conf_wrong = metrics["mean_confidence_when_wrong"]
+    delta = round(conf_correct - conf_wrong, 2)
+    cal_col1, cal_col2, cal_col3 = st.columns(3)
+    cal_col1.metric("Mean signal — correct", conf_correct)
+    cal_col2.metric("Mean signal — wrong", conf_wrong)
+    cal_col3.metric("Gap (correct − wrong)", delta)
+    if delta > 3:
+        st.success("Signal weakly tracks correctness — higher scores tend toward correct predictions.")
+    else:
+        st.warning(
+            "Signal does not track correctness — scores are not calibrated. "
+            "Do not interpret Signal Strength as a probability."
+        )
 
-    cm_path = _confusion_matrix_path(mode)
+    cm_path = _confusion_matrix_path(mode, tier)
     if cm_path.exists():
-        st.image(str(cm_path), caption=f"Confusion matrix ({mode}, n={metrics.get('n', '?')})")
+        label = f"Confusion matrix ({mode}{', ' + tier if tier else ''}, n={metrics.get('n', '?')})"
+        st.image(str(cm_path), caption=label)
     else:
         st.warning(f"No confusion matrix image at `{cm_path.relative_to(ROOT)}`.")
 
+    if "n_annotator_disagreements" in metrics:
+        n_dis = metrics["n_annotator_disagreements"]
+        dis_rate = metrics["annotator_disagreement_rate"]
+        st.markdown("**Annotator disagreements (expert tier)**")
+        st.write(
+            f"{n_dis} row(s) had non-unanimous gold labels "
+            f"({dis_rate:.1%} of this eval set). "
+            "Treat model predictions on these rows as lower-confidence ground truth."
+        )
+
     st.markdown("**Classification report**")
     st.dataframe(_classification_report_table(metrics), use_container_width=True)
+
+
+def _display_tier_breakdown(by_tier: dict) -> None:
+    st.subheader("Per-tier breakdown")
+    modes = [m for m in by_tier if by_tier[m]]
+    selected_mode = st.selectbox("Mode", modes, key="tier_mode_select")
+    tier_data = by_tier.get(selected_mode, {})
+    for tier, metrics in tier_data.items():
+        desc = GOLD_TIER_LEGEND.get(tier, "")
+        with st.expander(f"`{tier}` — {desc}" if desc else f"`{tier}`"):
+            _display_mode_results(selected_mode, metrics, tier=tier)
 
 
 def _load_precomputed_suite() -> dict | None:
@@ -141,7 +174,12 @@ if action == "Run full suite":
         status.empty()
         st.success(f"Saved to `{EVAL_JSON.relative_to(ROOT)}`")
         for mode, metrics in suite.items():
+            if mode == "by_tier":
+                continue
+            st.subheader(mode.replace("_", " ").title())
             _display_mode_results(mode, metrics)
+        if "by_tier" in suite:
+            _display_tier_breakdown(suite["by_tier"])
 
 elif action == "View precomputed results":
     suite = _load_precomputed_suite()
@@ -153,4 +191,9 @@ elif action == "View precomputed results":
     else:
         st.caption(f"Loaded from `{EVAL_JSON.relative_to(ROOT)}`")
         for mode, metrics in suite.items():
+            if mode == "by_tier":
+                continue
+            st.subheader(mode.replace("_", " ").title())
             _display_mode_results(mode, metrics)
+        if "by_tier" in suite:
+            _display_tier_breakdown(suite["by_tier"])
