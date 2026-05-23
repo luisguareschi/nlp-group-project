@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import json
 import re
+import ssl
 import urllib.error
 import urllib.request
+
+import certifi
 
 REDDIT_POST_URL = re.compile(
     r"https?://(?:www\.|old\.|np\.)?reddit\.com/r/(?P<sub>[^/]+)/comments/(?P<id>[a-z0-9]+)",
@@ -37,8 +40,9 @@ def reddit_json_url(post_url: str) -> str:
 
 def _fetch_json(url: str) -> list:
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+    ssl_ctx = ssl.create_default_context(cafile=certifi.where())
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
+        with urllib.request.urlopen(req, timeout=20, context=ssl_ctx) as resp:
             return json.loads(resp.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         if e.code == 404:

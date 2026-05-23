@@ -135,6 +135,8 @@ def run_eval(
         y_true, y_pred, labels=labels_present, zero_division=0, output_dict=True
     )
 
+    n_disagreements = sum(1 for r in rows if r.annotator_disagreement)
+
     return {
         "mode": mode,
         "n": len(rows),
@@ -144,6 +146,8 @@ def run_eval(
         "mean_confidence_when_correct": round(float(conf_correct), 2),
         "mean_confidence_when_wrong": round(float(conf_wrong), 2),
         "high_confidence_errors": high_conf_wrong,
+        "n_annotator_disagreements": n_disagreements,
+        "annotator_disagreement_rate": round(n_disagreements / len(rows), 4) if rows else 0.0,
         "classification_report": report,
         "y_true": y_true,
         "y_pred": y_pred,
@@ -180,7 +184,9 @@ def run_full_eval_suite(
     modes = ("features_only", "hybrid")
     rows = load_eval()
     n = len(rows)
-    total_steps = len(modes) * (n + 1) + 1
+    tiers = sorted({r.gold_tier for r in rows})
+    # steps: per mode — n classifications + 1 matrix save; per tier per mode — tier_n + 1; plus final write
+    total_steps = len(modes) * (n + 1) + len(modes) * len(tiers) * 2 + 1
 
     def report(message: str, step: int) -> None:
         if on_progress:
@@ -194,7 +200,7 @@ def run_full_eval_suite(
             def mode_progress(message: str, current: int, _local_total: int) -> None:
                 report(message, step + current)
 
-            m = run_eval(mode=mode, model=model, on_progress=mode_progress)
+            m = run_eval(rows=rows, mode=mode, model=model, on_progress=mode_progress)
             step += n
             suite[mode] = {
                 k: v for k, v in m.items() if k not in ("y_true", "y_pred", "labels")
@@ -207,6 +213,29 @@ def run_full_eval_suite(
         except Exception as e:
             step += n + 1
             suite[mode] = {"error": str(e)}
+
+    # Per-tier breakdown
+    by_tier: dict = {}
+    for mode in modes:
+        by_tier[mode] = {}
+        for tier in tiers:
+            tier_rows = [r for r in rows if r.gold_tier == tier]
+            try:
+                m = run_eval(rows=tier_rows, mode=mode, model=model)
+                step += len(tier_rows)
+                by_tier[mode][tier] = {
+                    k: v for k, v in m.items() if k not in ("y_true", "y_pred", "labels")
+                }
+                save_confusion_matrix(
+                    m, RESULTS_DIR / f"confusion_matrix_{mode}_{tier}.png"
+                )
+                step += 1
+                report(f"Saved confusion matrix ({mode}, {tier})", step)
+            except Exception as e:
+                step += len(tier_rows) + 1
+                by_tier[mode][tier] = {"error": str(e)}
+
+    suite["by_tier"] = by_tier
 
     step += 1
     report("Writing eval_run.json", step)

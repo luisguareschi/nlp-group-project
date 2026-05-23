@@ -170,12 +170,16 @@ if st.button("Analyze thread", type="primary"):
             {
                 "User": f"u/{r.username}",
                 "Label": LABEL_DISPLAY.get(r.label, r.label) + badge,
-                "Confidence": r.confidence,
+                "Signal Strength": r.confidence,
                 "Reasoning": r.reasoning,
                 "Cues": "; ".join(r.cues) if r.cues else "—",
             }
         )
     st.dataframe(rows, use_container_width=True, hide_index=True)
+    st.caption(
+        "Signal Strength reflects stylometric or LLM signal intensity (0–100). "
+        "It is not a calibrated probability — see the Evaluation dashboard for calibration metrics."
+    )
 
     with st.expander("Label breakdown"):
         st.json(analysis.label_counts)

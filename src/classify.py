@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from pathlib import Path
 
 from src.features import UserFeatures, extract_features, features_only_classify
@@ -11,6 +13,7 @@ from src.schemas import LABELS, ClassificationResult, Label
 
 PROMPT_PATH = Path(__file__).resolve().parents[1] / "prompts" / "classify_user.txt"
 
+OLLAMA_TIMEOUT_SECONDS = 40
 SHORT_COMMENT_CHAR_LIMIT = 20
 LOW_EVIDENCE_THRESHOLD = 40
 SHORT_COMMENT_CONF_CAP = 60
@@ -72,16 +75,25 @@ Comments:
 {features.to_summary()}
 Heuristic-only guess: {feat_label} ({feat_conf}%)
 
+Signal interpretation hints:
+- High generic_opener_score + low type_token_ratio in long comments → likely bot_imitating_human
+- bot_phrase_hits > 0 + list_pattern_score > 0 → likely bot
+- High all_caps_rate with no bot phrases → likely human_imitating_bot (ironic)
+- Low scores across all signals, idiosyncratic phrasing → likely human
+
 Classify u/{username}. Return JSON only."""
 
-    response = ollama.chat(
-        model=model,
-        messages=[
-            {"role": "system", "content": system},
-            {"role": "user", "content": user_msg},
-        ],
-        options={"temperature": temperature},
-    )
+    messages = [
+        {"role": "system", "content": system},
+        {"role": "user", "content": user_msg},
+    ]
+    options = {"temperature": temperature}
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(ollama.chat, model=model, messages=messages, options=options)
+        try:
+            response = future.result(timeout=OLLAMA_TIMEOUT_SECONDS)
+        except FuturesTimeoutError:
+            raise RuntimeError(f"Ollama timed out after {OLLAMA_TIMEOUT_SECONDS}s")
     raw = response["message"]["content"]
     data = _extract_json(raw)
 
