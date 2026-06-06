@@ -1,13 +1,20 @@
-from src.reddit_fetch import RedditFetchError, reddit_json_url, reddit_listing_to_paste
+from src.reddit_fetch import (
+    RedditFetchError,
+    reddit_html_to_paste,
+    reddit_json_url,
+    reddit_listing_to_paste,
+    reddit_thread_url,
+)
 
 
-def test_reddit_json_url():
+def test_reddit_thread_url():
     url = (
         "https://www.reddit.com/r/TheBoys/comments/1tl9qqa/"
         "homelander_at_full_power/?sort=new"
     )
-    assert "1tl9qqa.json" in reddit_json_url(url)
-    assert "r/TheBoys" in reddit_json_url(url)
+    thread_url = reddit_thread_url(url)
+    assert thread_url == "https://old.reddit.com/r/TheBoys/comments/1tl9qqa/"
+    assert reddit_json_url(url) == thread_url
 
 
 def test_reddit_json_url_rejects_invalid():

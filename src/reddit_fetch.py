@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import json
 import re
 import ssl
 import urllib.error
 import urllib.request
+from html import unescape
 
 import certifi
 
@@ -15,13 +15,24 @@ REDDIT_POST_URL = re.compile(
 
 USER_AGENT = "DeadInternetDetector/1.0 (NLP course project; +https://github.com)"
 
+THING_RE = re.compile(
+    r'<div[^>]*class="[^"]*\bthing id-(t3|t1)_[^"]*"[^>]*data-author="([^"]*)"[^>]*>'
+    r'(.*?)(?=<div[^>]*class="[^"]*\bthing id-(?:t3|t1)_|\Z)',
+    re.DOTALL | re.IGNORECASE,
+)
+TITLE_RE = re.compile(
+    r'<a[^>]*class="title[^"]*"[^>]*>(.*?)</a>',
+    re.DOTALL | re.IGNORECASE,
+)
+MD_RE = re.compile(r'<div class="md">(.*?)</div>', re.DOTALL | re.IGNORECASE)
+
 
 class RedditFetchError(Exception):
     """Raised when a Reddit thread cannot be fetched or parsed."""
 
 
-def reddit_json_url(post_url: str) -> str:
-    """Build the Reddit JSON API URL for a post link."""
+def reddit_thread_url(post_url: str) -> str:
+    """Build an old.reddit.com URL for a post link."""
     url = post_url.strip()
     if not url:
         raise RedditFetchError("Enter a Reddit post URL.")
@@ -32,28 +43,52 @@ def reddit_json_url(post_url: str) -> str:
             "Use a link like https://www.reddit.com/r/subreddit/comments/ID/title/"
         )
     sub, post_id = match.group("sub"), match.group("id")
-    return (
-        f"https://www.reddit.com/r/{sub}/comments/{post_id}.json"
-        f"?limit=500&depth=10&raw_json=1"
+    return f"https://old.reddit.com/r/{sub}/comments/{post_id}/"
+
+
+def reddit_json_url(post_url: str) -> str:
+    """Deprecated alias kept for tests; returns the HTML thread URL."""
+    return reddit_thread_url(post_url)
+
+
+def _request(url: str) -> urllib.request.Request:
+    return urllib.request.Request(
+        url,
+        headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml,application/json;q=0.9,*/*;q=0.8",
+            "Accept-Language": "en-US,en;q=0.9",
+        },
     )
 
 
-def _fetch_json(url: str) -> list:
-    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
+def _fetch_html(url: str) -> str:
+    req = _request(url)
     ssl_ctx = ssl.create_default_context(cafile=certifi.where())
     try:
         with urllib.request.urlopen(req, timeout=20, context=ssl_ctx) as resp:
-            return json.loads(resp.read().decode("utf-8"))
+            return resp.read().decode("utf-8", errors="replace")
     except urllib.error.HTTPError as e:
         if e.code == 404:
             raise RedditFetchError("Post not found (404).") from e
+        if e.code == 403:
+            raise RedditFetchError(
+                "Reddit blocked this request (HTTP 403). "
+                "Try again in a minute, or paste the thread manually."
+            ) from e
         if e.code == 429:
             raise RedditFetchError("Reddit rate-limited this request. Try again in a minute.") from e
         raise RedditFetchError(f"Reddit returned HTTP {e.code}.") from e
     except urllib.error.URLError as e:
         raise RedditFetchError(f"Could not reach Reddit: {e.reason}") from e
-    except json.JSONDecodeError as e:
-        raise RedditFetchError("Invalid response from Reddit.") from e
+
+
+def _strip_html(html: str) -> str:
+    text = re.sub(r"<br\s*/?>", "\n", html, flags=re.IGNORECASE)
+    text = re.sub(r"</p>\s*<p>", "\n\n", text, flags=re.IGNORECASE)
+    text = re.sub(r"<[^>]+>", "", text)
+    text = unescape(text)
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
 def _format_comment_line(author: str, body: str) -> str | None:
@@ -90,6 +125,45 @@ def _walk_comments(
             if _walk_comments(reply_children, lines, max_comments=max_comments):
                 truncated = True
     return truncated or len(lines) >= max_comments
+
+
+def reddit_html_to_paste(html: str, *, max_comments: int = 200) -> tuple[str, bool]:
+    """Convert an old.reddit.com comments page to u/username paste format."""
+    lines: list[str] = []
+    comment_count = 0
+    truncated = False
+
+    for match in THING_RE.finditer(html):
+        kind, author, block = match.group(1), match.group(2), match.group(3)
+        if kind == "t3":
+            title_match = TITLE_RE.search(block)
+            title = _strip_html(title_match.group(1)) if title_match else ""
+            md_match = MD_RE.search(block)
+            body = _strip_html(md_match.group(1)) if md_match else ""
+            if body:
+                op_body = f"{title}\n\n{body}" if title else body
+            else:
+                op_body = title
+            line = _format_comment_line(author, op_body)
+            if line:
+                lines.append(line)
+            continue
+
+        if comment_count >= max_comments:
+            truncated = True
+            break
+        md_match = MD_RE.search(block)
+        if not md_match:
+            continue
+        line = _format_comment_line(author, _strip_html(md_match.group(1)))
+        if line:
+            lines.append(line)
+            comment_count += 1
+
+    if not lines:
+        raise RedditFetchError("No comment text found in this post.")
+
+    return "\n".join(lines), truncated
 
 
 def reddit_listing_to_paste(payload: list, *, max_comments: int = 200) -> tuple[str, bool]:
@@ -129,6 +203,6 @@ def reddit_listing_to_paste(payload: list, *, max_comments: int = 200) -> tuple[
 
 def fetch_reddit_thread(post_url: str, *, max_comments: int = 200) -> tuple[str, bool]:
     """Fetch a Reddit post URL and return (paste-ready thread text, truncated)."""
-    json_url = reddit_json_url(post_url)
-    payload = _fetch_json(json_url)
-    return reddit_listing_to_paste(payload, max_comments=max_comments)
+    thread_url = reddit_thread_url(post_url)
+    html = _fetch_html(thread_url)
+    return reddit_html_to_paste(html, max_comments=max_comments)
