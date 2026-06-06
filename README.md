@@ -20,9 +20,14 @@ See [docs/INSTALL.md](docs/INSTALL.md) and [docs/USER_MANUAL.md](docs/USER_MANUA
 
 ## Features
 
-- Parse Reddit-style pasted threads (`u/name: comment`)
+- Parse Reddit-style pasted threads (`u/name: comment`) or load directly from a Reddit URL
 - Hybrid classification: Ollama LLM + stylometric heuristics (fallback when offline)
 - `features_only` mode for fast, fully local evaluation
+- **Side-by-side mode comparison**: run `features_only` and `hybrid` in parallel and highlight disagreements
+- **Annotated thread view**: every comment line color-coded by the speaker's predicted label
+- **Export results**: download per-participant results as CSV or JSON after any analysis
+- **Shareable URL**: append `?t=<encoded>` to the app URL to share a pre-loaded thread
+- **Temporal features**: when loading from Reddit, `reply_interval_cv` (coefficient of variation of inter-comment gaps) is computed per user and fed into the bot score
 - Custom eval set: **48** gold participant labels ([`data/eval/participants.jsonl`](data/eval/participants.jsonl)) across five tiers (synthetic, disclosed, grid, expert, edge)
 - **Evaluation dashboard** Streamlit page: run or view the full `features_only` + `hybrid` suite with progress feedback
 - CLI harness: `python -m src.eval_runner` (interactive Ollama model picker, `tqdm` progress)

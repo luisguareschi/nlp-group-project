@@ -48,22 +48,28 @@ class UserFeatures:
     list_pattern_score: float
     all_caps_rate: float
     generic_opener_score: float
+    reply_interval_cv: float | None = None  # coefficient of variation of inter-comment gaps; None if <2 timestamps
 
     def to_summary(self) -> str:
-        return (
+        s = (
             f"comments={self.comment_count}, avg_chars={self.avg_chars:.0f}, "
             f"ttr={self.type_token_ratio:.2f}, emoji_density={self.emoji_density:.3f}, "
             f"bot_phrases={self.bot_phrase_hits}, hedging={self.hedging_hits}, "
             f"exclamations={self.exclamation_rate:.2f}, list_score={self.list_pattern_score:.2f}, "
             f"caps_rate={self.all_caps_rate:.2f}, generic_openers={self.generic_opener_score:.2f}"
         )
+        if self.reply_interval_cv is not None:
+            s += f", reply_interval_cv={self.reply_interval_cv:.3f}"
+        return s
 
 
 def _tokenize(text: str) -> list[str]:
     return re.findall(r"[a-zA-Z']+", text.lower())
 
 
-def extract_features(username: str, comments: list[str]) -> UserFeatures:
+def extract_features(
+    username: str, comments: list[str], timestamps: list[int] | None = None
+) -> UserFeatures:
     joined = " ".join(comments)
     lower = joined.lower()
     words = _tokenize(joined)
@@ -97,6 +103,17 @@ def extract_features(username: str, comments: list[str]) -> UserFeatures:
             generic_openers += 1
     generic_score = generic_openers / max(len(comments), 1)
 
+    reply_interval_cv: float | None = None
+    if timestamps and len(timestamps) >= 2:
+        sorted_ts = sorted(timestamps)
+        intervals = [sorted_ts[i + 1] - sorted_ts[i] for i in range(len(sorted_ts) - 1)]
+        mean_iv = sum(intervals) / len(intervals)
+        if mean_iv > 0:
+            variance = sum((x - mean_iv) ** 2 for x in intervals) / len(intervals)
+            reply_interval_cv = round(math.sqrt(variance) / mean_iv, 3)
+        else:
+            reply_interval_cv = 0.0
+
     return UserFeatures(
         username=username,
         comment_count=len(comments),
@@ -109,6 +126,7 @@ def extract_features(username: str, comments: list[str]) -> UserFeatures:
         list_pattern_score=round(list_score, 2),
         all_caps_rate=round(caps_rate, 3),
         generic_opener_score=round(generic_score, 2),
+        reply_interval_cv=reply_interval_cv,
     )
 
 
@@ -142,6 +160,10 @@ def features_only_classify(features: UserFeatures) -> tuple[str, int, list[str]]
     if features.exclamation_rate >= 1.0 and features.hedging_hits >= 1:
         score_bih += 15
         cues.append("Enthusiastic + hedging reply-guy tone")
+
+    if features.reply_interval_cv is not None and features.reply_interval_cv < 0.2 and features.comment_count >= 3:
+        score_bot += 15
+        cues.append("Very uniform reply timing — low interval variance")
 
     if features.exclamation_rate > 1.5 and features.emoji_density > 0.01:
         score_hib -= 5  # more human-like chaos

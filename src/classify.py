@@ -55,10 +55,11 @@ def classify_with_ollama(
     model: str = "llama3.2:3b",
     temperature: float = 0.2,
     mode: str = "hybrid",
+    timestamps: list[int] | None = None,
 ) -> ClassificationResult:
     import ollama
 
-    features = extract_features(username, comments)
+    features = extract_features(username, comments, timestamps=timestamps)
     feat_label, feat_conf, feat_cues = features_only_classify(features)
 
     system = load_system_prompt()
@@ -116,8 +117,9 @@ Classify u/{username}. Return JSON only."""
 def classify_features_only(
     username: str,
     comments: list[str],
+    timestamps: list[int] | None = None,
 ) -> ClassificationResult:
-    features = extract_features(username, comments)
+    features = extract_features(username, comments, timestamps=timestamps)
     label, conf, cues = features_only_classify(features)
     result = ClassificationResult(
         username=username,
@@ -141,9 +143,10 @@ def classify_participant(
     mode: str = "hybrid",
     model: str = "llama3.2:3b",
     temperature: float = 0.2,
+    timestamps: list[int] | None = None,
 ) -> ClassificationResult:
     if mode == "features_only":
-        return classify_features_only(username, comments)
+        return classify_features_only(username, comments, timestamps=timestamps)
 
     if mode == "llm_only":
         try:
@@ -154,9 +157,10 @@ def classify_participant(
                 model=model,
                 temperature=temperature,
                 mode="llm_only",
+                timestamps=timestamps,
             )
         except Exception as e:
-            r = classify_features_only(username, comments)
+            r = classify_features_only(username, comments, timestamps=timestamps)
             r.reasoning = f"Ollama unavailable ({e}). Fallback heuristics used."
             r.mode = "llm_only_fallback"
             return r
@@ -170,9 +174,10 @@ def classify_participant(
             model=model,
             temperature=temperature,
             mode="hybrid",
+            timestamps=timestamps,
         )
     except Exception:
-        return classify_features_only(username, comments)
+        return classify_features_only(username, comments, timestamps=timestamps)
 
 
 def analyze_thread(
@@ -182,6 +187,7 @@ def analyze_thread(
     model: str = "llama3.2:3b",
     temperature: float = 0.2,
     on_progress: Callable[[int, int], None] | None = None,
+    timestamps_dict: dict[str, list[int]] | None = None,
 ) -> list[ClassificationResult]:
     total_comments = sum(len(comments) for comments in participants.values())
     completed_comments = 0
@@ -190,6 +196,7 @@ def analyze_thread(
 
     results: list[ClassificationResult] = []
     for user, comments in participants.items():
+        user_timestamps = (timestamps_dict or {}).get(user)
         results.append(
             classify_participant(
                 user,
@@ -198,6 +205,7 @@ def analyze_thread(
                 mode=mode,
                 model=model,
                 temperature=temperature,
+                timestamps=user_timestamps,
             )
         )
         completed_comments += len(comments)

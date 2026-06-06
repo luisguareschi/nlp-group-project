@@ -25,6 +25,7 @@ TITLE_RE = re.compile(
     re.DOTALL | re.IGNORECASE,
 )
 MD_RE = re.compile(r'<div class="md">(.*?)</div>', re.DOTALL | re.IGNORECASE)
+TIMESTAMP_RE = re.compile(r'data-timestamp="(\d+)"', re.IGNORECASE)
 
 
 class RedditFetchError(Exception):
@@ -127,14 +128,24 @@ def _walk_comments(
     return truncated or len(lines) >= max_comments
 
 
-def reddit_html_to_paste(html: str, *, max_comments: int = 200) -> tuple[str, bool]:
-    """Convert an old.reddit.com comments page to u/username paste format."""
+def reddit_html_to_paste(
+    html: str, *, max_comments: int = 200
+) -> tuple[str, bool, dict[str, list[int]]]:
+    """Convert an old.reddit.com comments page to u/username paste format.
+
+    Returns (paste_text, truncated, timestamps) where timestamps maps each
+    author to a list of Unix timestamps (ms) for their comments.
+    """
     lines: list[str] = []
+    timestamps: dict[str, list[int]] = {}
     comment_count = 0
     truncated = False
 
     for match in THING_RE.finditer(html):
         kind, author, block = match.group(1), match.group(2), match.group(3)
+        ts_match = TIMESTAMP_RE.search(match.group(0))
+        ts = int(ts_match.group(1)) if ts_match else None
+
         if kind == "t3":
             title_match = TITLE_RE.search(block)
             title = _strip_html(title_match.group(1)) if title_match else ""
@@ -147,6 +158,8 @@ def reddit_html_to_paste(html: str, *, max_comments: int = 200) -> tuple[str, bo
             line = _format_comment_line(author, op_body)
             if line:
                 lines.append(line)
+                if ts and author not in ("[deleted]", "[removed]", "deleted"):
+                    timestamps.setdefault(author, []).append(ts)
             continue
 
         if comment_count >= max_comments:
@@ -159,11 +172,13 @@ def reddit_html_to_paste(html: str, *, max_comments: int = 200) -> tuple[str, bo
         if line:
             lines.append(line)
             comment_count += 1
+            if ts and author not in ("[deleted]", "[removed]", "deleted"):
+                timestamps.setdefault(author, []).append(ts)
 
     if not lines:
         raise RedditFetchError("No comment text found in this post.")
 
-    return "\n".join(lines), truncated
+    return "\n".join(lines), truncated, timestamps
 
 
 def reddit_listing_to_paste(payload: list, *, max_comments: int = 200) -> tuple[str, bool]:
@@ -201,8 +216,10 @@ def reddit_listing_to_paste(payload: list, *, max_comments: int = 200) -> tuple[
     return "\n".join(lines), truncated
 
 
-def fetch_reddit_thread(post_url: str, *, max_comments: int = 200) -> tuple[str, bool]:
-    """Fetch a Reddit post URL and return (paste-ready thread text, truncated)."""
+def fetch_reddit_thread(
+    post_url: str, *, max_comments: int = 200
+) -> tuple[str, bool, dict[str, list[int]]]:
+    """Fetch a Reddit post URL and return (paste-ready text, truncated, timestamps)."""
     thread_url = reddit_thread_url(post_url)
     html = _fetch_html(thread_url)
     return reddit_html_to_paste(html, max_comments=max_comments)
