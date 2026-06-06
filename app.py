@@ -74,21 +74,18 @@ with st.sidebar:
     st.header("Settings")
     mode = st.selectbox(
         "Classification mode",
-        ["hybrid", "features_only", "llm_only"],
-        help="hybrid: Ollama + heuristics fallback; features_only: no LLM",
+        ["hybrid", "features_only", "llm_only", "compare"],
+        help=(
+            "hybrid: Ollama + heuristics fallback; "
+            "features_only: no LLM; "
+            "compare: run features_only and hybrid side-by-side"
+        ),
     )
     model = st.selectbox("Ollama model", list_ollama_models())
     temperature = st.slider("Temperature", 0.0, 1.0, 0.2, 0.05)
     strict = st.checkbox("Strict mode (temp 0.1)", value=False)
     if strict:
         temperature = 0.1
-
-    st.divider()
-    compare_modes = st.checkbox(
-        "Compare features_only vs hybrid",
-        value=False,
-        help="Run both modes side-by-side and highlight where they disagree. Requires Ollama for hybrid.",
-    )
 
     if ollama_available():
         st.success("Ollama detected")
@@ -196,7 +193,7 @@ if st.button("Analyze thread", type="primary"):
     timestamps = st.session_state.get("thread_timestamps", {})
 
     # ── Compare mode ──────────────────────────────────────────────────────────
-    if compare_modes:
+    if mode == "compare":
         progress = st.progress(0.0, text="Running features_only…")
 
         def _prog_feat(d: int, t: int) -> None:
@@ -369,23 +366,42 @@ if st.button("Analyze thread", type="primary"):
                 unsafe_allow_html=True,
             )
 
-    # ── Feature 6: Share link ─────────────────────────────────────────────────
-    with st.expander("Share this thread"):
-        try:
-            encoded = _encode_thread(thread_text)
-            if len(encoded) > 8000:
-                st.warning(
-                    "Thread text is too long to encode in a URL (~8 KB limit). "
-                    "Share the raw text manually instead."
-                )
-            else:
-                st.caption(
-                    "Append this parameter to the app URL to share a pre-loaded thread "
-                    "(e.g. http://localhost:8501?t=…)."
-                )
-                st.code(f"?t={encoded}", language="text")
-        except Exception:
-            st.warning("Could not generate share link.")
+    # ── Feature 6: Share button — copies full URL to clipboard ───────────────
+    try:
+        encoded = _encode_thread(thread_text)
+        if len(encoded) > 8000:
+            st.warning("Thread is too long to share via URL (~8 KB limit).")
+        else:
+            import streamlit.components.v1 as components
+            components.html(
+                f"""
+                <script>
+                function copyShareUrl() {{
+                    var base = window.parent.location.href.split('?')[0];
+                    var url = base + '?t={encoded}';
+                    navigator.clipboard.writeText(url).then(function() {{
+                        var btn = document.getElementById('share-btn');
+                        btn.innerText = '✓ Copied!';
+                        btn.style.background = '#4CAF50';
+                        setTimeout(function() {{
+                            btn.innerText = 'Share thread';
+                            btn.style.background = '#0068c9';
+                        }}, 2000);
+                    }}).catch(function() {{
+                        document.getElementById('share-btn').innerText = 'Copy failed — clipboard not available';
+                    }});
+                }}
+                </script>
+                <button id="share-btn" onclick="copyShareUrl()"
+                    style="background:#0068c9;color:white;border:none;padding:8px 18px;
+                           border-radius:4px;cursor:pointer;font-size:14px;font-family:sans-serif;">
+                    Share thread
+                </button>
+                """,
+                height=48,
+            )
+    except Exception:
+        pass
 
     # ── Per-participant detail expanders ──────────────────────────────────────
     for r in analysis.participants:
