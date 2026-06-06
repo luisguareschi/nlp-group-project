@@ -74,7 +74,7 @@ with st.sidebar:
     st.header("Settings")
     mode = st.selectbox(
         "Classification mode",
-        ["hybrid", "features_only", "llm_only", "compare"],
+        ["hybrid", "features_only", "llm_only", "compare hybrid and features_only"],
         help=(
             "hybrid: Ollama + heuristics fallback; "
             "features_only: no LLM; "
@@ -193,7 +193,7 @@ if st.button("Analyze thread", type="primary"):
     timestamps = st.session_state.get("thread_timestamps", {})
 
     # ── Compare mode ──────────────────────────────────────────────────────────
-    if mode == "compare":
+    if mode == "compare hybrid and features_only":
         progress = st.progress(0.0, text="Running features_only…")
 
         def _prog_feat(d: int, t: int) -> None:
