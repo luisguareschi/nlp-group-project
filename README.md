@@ -74,6 +74,7 @@ Precomputed metrics ship in [`results/eval_run.json`](results/eval_run.json) so 
 | Requirement         | Artifact                                 |
 | ------------------- | ---------------------------------------- |
 | Functional POC      | `app.py`                                 |
+| Field review        | `docs/FIELD_REVIEW.md`                   |
 | Custom eval (30–50) | `data/eval/participants.jsonl` (48 rows) |
 | User manual         | `docs/USER_MANUAL.md`                    |
 | Install guide       | `docs/INSTALL.md`                        |

@@ -10,6 +10,7 @@ Expand each section for PDF submission. Target length: appropriate to project sc
 
 ## 2. Related work
 
+- Start from industry context in [`docs/FIELD_REVIEW.md`](../FIELD_REVIEW.md); expand here with methods, papers, and citations
 - Social bot detection (BotSim, platform moderation)
 - LLM-generated text detection (GRiD, GPT detectors)
 - Human performance studies ("Bot or Not?" style experiments)
