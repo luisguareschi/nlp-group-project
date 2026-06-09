@@ -36,12 +36,12 @@ See `results/eval_run.json`. Typical pattern: strong **human** recall, weak **bo
 
 ## Case 3: Single-word comments → overconfident guess
 
-| Field | Value |
-|-------|
-| Thread | `edge_01` / `short_one`, `short_two` |
-| Gold | `human` |
-| Predicted | Variable |
-| Snippet | `lol`, `this` |
+| Field      | Value                                                                 |
+|------------|-----------------------------------------------------------------------|
+| Thread     | `edge_01` / `short_one`, `short_two`                                 |
+| Gold       | `human`                                                              |
+| Predicted  | Variable                                                             |
+| Snippet    | `lol`, `this`                                                        |
 | Hypothesis | Parser works; features thin. Confidence cap at 55 mitigates but label still unstable |
 
 ---
