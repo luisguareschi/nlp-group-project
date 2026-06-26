@@ -1,0 +1,19 @@
+# Individual Reflection — Alejandro Gutierrez Werner
+
+---
+
+## Specific contributions
+
+I started but helping to brainstorm the original idea for this project, proposing the "Dead Internet Detector" concept. Once launched, I contributed as the technical reviewer and turned that review into a round of concrete improvements. On evaluation I extended `run_full_eval_suite` to produce a per-tier breakdown, so the harness saves metrics and confusion matrices separately for the synthetic, disclosed, grid, expert, and edge tiers instead of reporting one aggregate number. I added annotator-disagreement count and rate to the metrics, and reworked the dashboard calibration view with a confidence-gap metric and a colour-coded reading, including renaming "Confidence" to "Signal Strength" in the main UI so the score is not mistaken for a probability. On classification I expanded the prompt's label definitions with concrete linguistic signals for the `human` versus `bot_imitating_human` distinction, added a key-contrast section and stylometric signal-interpretation hints to the model message, and grew `GENERIC_OPENERS` from four to nineteen phrases as a module-level constant. On reliability I wrapped the Ollama call in a timeout so a slow model fails into the existing heuristic fallback, and fixed the macOS SSL errors in the Reddit fetcher. I also fixed multiple bugs found during the reviews and authored the executive summary and the technical report.
+
+---
+
+## What I learned
+
+The hardest part of the project for me was the evaluation. It's one thing to say "used an LLM to identify another LLM", but another to methodically identify through evidence and criteria. The metrics themselves are standard, but a statistical baseline still has to be designed, built, and tested before any number carries weight. Deciding to slice results by tier, to report annotator disagreement, and to track a calibration gap were decisions that the metrics do not make on their own. Each criterion answers a different question, and assembling that set took most of the effort. A single macro-F1 would have let us claim the tool "works" while obscuring that it scores near zero on `bot_imitating_human`, and reporting per tier is what brought that weakness into view.
+
+Calibration turned out to require a similar level of attention. We found that you can't just one-shot this, these needed to be tuned. A confidence score that looks like a probability invites more trust than it has earned, so we measured the gap between confidence when the model is right and when it is wrong, and renamed the field to Signal Strength in the interface. The score becomes useful only once you have settled what it is allowed to claim.
+
+A second lesson came from how little text these threads often provide. When a participant has posted only two or three short lines, the discriminative evidence sits in the metadata as much as in the message: the register, the opener patterns, the hedging after praise, and how regularly the comments are spaced in time. Most of my classification work tried to make the model weigh those cues, through explicit signal-interpretation hints and a wider set of engagement-bait openers. A relaxed-sounding bot can reproduce the wording of a human comment fairly easily, but its cadence and behaviour are harder to fake, so those signals often matter more than the content itself.
+
+Reviewing someone else's pipeline before extending it also showed me that reliability and reproducibility belong to the evaluation itself. A baseline that only runs on the author's machine has little value to anyone else, which is why the timeout wrapper and the SSL fix mattered alongside the metrics. Writing the report afterwards made me defend each of these choices in plain language, which is the clearest test I know of whether I understood them.
